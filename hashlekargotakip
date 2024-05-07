@@ -1,0 +1,216 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct {
+    int takipno;
+    char gonderici[100];
+    char alici[100];
+    char kargodurum[100];
+} kargo;
+
+kargo* hashtablo[10];
+
+int hashindex1(int takipno) {
+    return takipno % 10;
+}
+
+int hashindex2(int takipno) {
+    return 7 - (takipno % 7);
+}
+
+int doublehashing(int index1, int deneme, int index2) {
+    return (index1 + deneme * index2) % 10;
+}
+
+void dosyayayaz() {
+    FILE* dosya = fopen("veri.txt", "w");
+
+    for (int i = 0; i <10; i++) {
+        if (hashtablo[i] != NULL) {
+            fprintf(dosya, "%d %s %s %s\n", hashtablo[i]->takipno, hashtablo[i]->gonderici, hashtablo[i]->alici, hashtablo[i]->kargodurum);
+        }
+    }
+
+    fclose(dosya);
+    printf("Dosya guncellendi!\n");
+}
+
+void kargoekle() {
+    kargo* yeni_kargo = (kargo*)malloc(sizeof(kargo));
+
+
+    printf("Takip No: ");
+    scanf("%d", &yeni_kargo->takipno);
+    printf("Gonderici: ");
+    scanf("%s", yeni_kargo->gonderici);
+    printf("Alici: ");
+    scanf("%s", yeni_kargo->alici);
+    printf("Kargo Durumu: ");
+    scanf("%s", yeni_kargo->kargodurum);
+
+    int index1 = hashindex1(yeni_kargo->takipno);
+    if (hashtablo[index1] == NULL) {
+        hashtablo[index1] = yeni_kargo;
+        printf("%d tablonun %d. indeksine eklendi\n", yeni_kargo->takipno, index1);
+        dosyayayaz(); 
+        return;
+    }
+
+    int index2 = hashindex2(yeni_kargo->takipno);
+    int index = index1;
+    for (int i = 1; i <10; i++) {
+        index = doublehashing(index1, i, index2);
+        if (hashtablo[index] == NULL) {
+            hashtablo[index] = yeni_kargo;
+            printf("%d kontrol edilerek %d. indexe eklendi\n", yeni_kargo->takipno, index);
+            dosyayayaz(); 
+            return;
+        }
+    }
+    printf("%d dolu oldugundan eklenemedi\n", yeni_kargo->takipno);
+    free(yeni_kargo);
+}
+void kargotakip(int takipno) {
+    int index1 = hashindex1(takipno);
+    int index2 = hashindex2(takipno);
+    int index = index1;
+
+    for (int i = 1; i < 10; i++) {
+        index = doublehashing(index1, i, index2);
+        if (hashtablo[index] != NULL && hashtablo[index]->takipno == takipno) {
+            printf("Takip no: %d\n", takipno);
+            printf("%d. adimda bulundu\n", i);
+            printf("Gönderici: %s\nAlici: %s\nKargo Durumu: %s\n", hashtablo[index]->gonderici, hashtablo[index]->alici, hashtablo[index]->kargodurum);
+            return;
+        }
+    }
+
+    printf("Kargo bulunamadi\n");
+}
+
+void kargoteslim(int takipno) {
+    int index1 = hashindex1(takipno);
+    int index2 = hashindex2(takipno);
+    int index = index1;
+    for (int i = 1; i < 10; i++) {
+        index = doublehashing(index1, i, index2);
+        if (hashtablo[index]->takipno == takipno) {
+            free(hashtablo[index]);
+            hashtablo[index] = NULL;
+            printf("Kargo teslim edildi\n");
+            dosyayayaz();
+            return;
+        }
+    }
+    printf("Kargo bulunamadi\n");
+}
+
+void listele() {
+    int kargoVarMi = 0;
+
+    printf("Kargolar:\n");
+
+    for (int i = 0; i < 10; i++) {
+        if (hashtablo[i] != NULL) {
+            kargoVarMi = 1;
+            printf("%d-> TakipNo: %d, Gonderici: %s, Alici: %s, Durum: %s\n",
+                   i + 1, hashtablo[i]->takipno, hashtablo[i]->gonderici, hashtablo[i]->alici, hashtablo[i]->kargodurum);
+        }
+    }
+
+    if (!kargoVarMi) {
+        printf("Kargo bulunamadi.\n");
+    }
+}
+
+void dosyadan_veri_girisi() {
+    FILE* dosya = fopen("veri.txt", "r");
+
+    kargo* kargoListesi[10];
+    for (int i = 0; i <10; i++) {
+        kargoListesi[i] = (kargo*)malloc(sizeof(kargo));
+        if (kargoListesi[i] == NULL) {
+            return;
+        }
+    }
+
+    int index = 0;
+
+    while (fscanf(dosya, "%d %s %s %s", &kargoListesi[index]->takipno, kargoListesi[index]->gonderici,
+                                           kargoListesi[index]->alici, kargoListesi[index]->kargodurum) != EOF) {
+        int index1 = hashindex1(kargoListesi[index]->takipno);
+        if (hashtablo[index1] == NULL) {
+            hashtablo[index1] = kargoListesi[index];
+            printf("%d: %d. indise yerlesti\n", kargoListesi[index]->takipno, index1);
+        } else {
+            int index2 = hashindex2(kargoListesi[index]->takipno);
+            int currentIndex = index1;
+            for (int i = 1; i <10; i++) {
+                currentIndex = doublehashing(index1, i, index2);
+                if (hashtablo[currentIndex] == NULL) {
+                    hashtablo[currentIndex] = kargoListesi[index];
+                    printf("%d: %d. indise yerlesti\n", kargoListesi[index]->takipno, currentIndex);
+                    break;
+                }
+            }
+        }
+
+        index++;
+        if (index >=10) {
+            printf("Daha fazla kargo eklenemez. Tablo dolu.\n");
+            break;
+        }
+    }
+
+    fclose(dosya);
+}
+
+
+int main() {
+    int sayi;
+
+    do {
+        printf("\n yapmak istediginiz islemi seciniz:\n");
+        printf("0. textten veri girisi yap\n");
+        printf("1. tum kargolari listele\n");
+        printf("2. kargo girisi yap\n");
+        printf("3. kargo takip\n");
+        printf("4. kargoyu teslim et\n");
+        printf("5. cikis\n");
+
+        scanf("%d", &sayi);
+
+        switch (sayi) {
+            case 0:
+                dosyadan_veri_girisi();
+                break;
+            case 1:
+                listele();
+                break;
+            case 2:
+                kargoekle();
+                break;
+            case 3:
+                printf("takip numarasi girin: ");
+                int takipno;
+                scanf("%d", &takipno);
+                kargotakip(takipno);
+                break;
+            case 4:
+                printf("teslim edilecek kargonun takip numarasini girin: ");
+                int teslim_takipno;
+                scanf("%d", &teslim_takipno);
+                kargoteslim(teslim_takipno);
+                break;
+            case 5:
+                printf("programdan cikiliyor\n");
+                break;
+            default:
+                printf("gecersiz secim tekrar deneyin\n");
+                break;
+        }
+
+    } while (sayi != 5); 
+
+    return 0;
+}
